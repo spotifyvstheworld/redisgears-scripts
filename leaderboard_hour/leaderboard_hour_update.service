@@ -3,6 +3,5 @@ Description=Hourly cronjob to update leaderboard
 
 [Service]
 Type=simple
-ExecStart=/opt/leaderboard_hour.py
+ExecStart=/usr/bin/python3 /opt/leaderboard_hour.py
 User=ec2-user
-

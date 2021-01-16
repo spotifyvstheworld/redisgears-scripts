@@ -2,10 +2,8 @@
 Description=script
 
 [Timer]
-Unit=leaderboard_hour_update.service
 OnBootSec=5min
 OnUnitActiveSec=15min
-OnCalendar=* *-*-* *:00:00
 Persistent=true
 
 [Install]

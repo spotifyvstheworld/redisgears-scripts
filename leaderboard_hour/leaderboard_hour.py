@@ -1,35 +1,37 @@
 import re
+import os
 from gearsclient import GearsRemoteBuilder as GearsBuilder
-from gearsclient import execute
-from dotenv import dotenv_values
+from gearsclient import execute, atomic
+from dotenv import load_dotenv
 import redis
 
-config = dotenv_values(".env")
+load_dotenv()
 
-def clean(x):
-    channelName = lambda x: re.search('{channel:artist_channel/(.*)}', x).group(1)
-    foo = {}
-    foo["artist"] = channelName(x["key"])
-    if 'fake_subscribers' in x["value"]:
-        foo["count"] = int(x['value']['fake_subscribers']) 
-    return foo
+def format(x):
+    channelName = lambda x: re.search('artist:(.*)', x).group(1)
+    data = {}
+    data["artist"] = x["key"]
+    if 'max_count' in x["value"]:
+        data["max_count"] = int(x['value']['max_count'])
+    return data
 
-def leaderboard(x):
-    print(x)
-    execute('SET', 'working', 'yes')
-    if 'artist' in x:
-        execute('ZADD', 'leaderboard_hour', x["count"], x["artist"])
+# updates hourly leaderboard
+def updateHourlyLeaderboard(x):
+    with atomic():
+        execute('ZADD', 'leaderboard_hour', x["max_count"], x["artist"])
+        execute('HSET', x["artist"], "max_count", 0)
+    return x
 
-conn = redis.Redis(host=config["REDIS_HOST"], port=config["REDIS_PORT"])
-gb = GearsBuilder(reader='KeysReader', defaultArg='{channel:artist_channel/*}', r=conn)
+conn = redis.Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"))
+gb = GearsBuilder(reader='KeysReader', defaultArg='artist', r=conn)
 
 gb \
- .map(clean)
+ .map(format) \
+ .foreach(updateHourlyLeaderboard)
 
-gb.foreach(leaderboard)
-
-res = gb.run('{channel:artist_channel/*}')
+res = gb.run('artist:*')
 
 for r in res[0]:
     print(r)
-    print('{}: {}'.format(r['artist'], r['count']))
+
+# {'event': None, 'key': 'artist:disclosure', 'type': 'hash', 'value': {'count': '0', 'max_count': 3}}
