@@ -20,7 +20,7 @@ def updateMaxCount(x):
     with atomic():
         maxCount = execute('hget', x["artist"], "max_count")
         if maxCount == None or int(x["count"]) > int(maxCount):
-            execute('hset', x["artist"], "max_count", x["count"])
+            execute('HSET', x["artist"], "max_count", x["count"])
     return x
 
 conn = redis.Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"))

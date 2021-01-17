@@ -7,18 +7,22 @@ import redis
 
 load_dotenv()
 
+channelName = lambda x: re.search('artist:(.*)', x).group(1)
+
+# format dict before being run in foreach
 def format(x):
-    channelName = lambda x: re.search('artist:(.*)', x).group(1)
     data = {}
     data["artist"] = x["key"]
     if 'max_count' in x["value"]:
         data["max_count"] = int(x['value']['max_count'])
     return data
 
-# updates hourly leaderboard
+# updates hourly leaderboard. Done by deleting it, filling it with the highest counts of
+# each artist within the hour, and resetting the max counts field of each artist
 def updateHourlyLeaderboard(x):
     with atomic():
-        execute('ZADD', 'leaderboard_hour', x["max_count"], x["artist"])
+        execute('DEL', 'leaderboard_hour')
+        execute('ZADD', 'leaderboard_hour', x["max_count"], channelName(x["artist"]))
         execute('HSET', x["artist"], "max_count", 0)
     return x
 
