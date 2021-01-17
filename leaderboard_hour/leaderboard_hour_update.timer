@@ -3,7 +3,7 @@ Description=script
 
 [Timer]
 OnBootSec=5min
-OnUnitActiveSec=15min
+OnUnitActiveSec=60min
 Persistent=true
 
 [Install]
